@@ -6,6 +6,7 @@
     <title>연세대 미래교육원 | AI K-Culture 에듀테크 전문가 과정</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&display=swap');
@@ -66,6 +67,67 @@
         .border-stone {
             border-color: #e3d9cf;
         }
+        
+        /* 관리자 모달 스타일 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .admin-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 48px;
+            height: 48px;
+            background-color: #1c1917;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            opacity: 0.3;
+            transition: opacity 0.3s ease;
+            border: none;
+        }
+        .admin-btn:hover {
+            opacity: 1;
+        }
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .admin-table th {
+            background-color: #f1f1f1;
+            padding: 12px;
+            text-align: left;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .admin-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e5e5e5;
+            font-size: 0.9rem;
+        }
+        .admin-table tr:hover {
+            background-color: #f9f9f9;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-amber-800 selection:text-white">
@@ -93,8 +155,70 @@
         </div>
     </header>
 
-    <main class="flex-grow pt-20 md:pt-24">
+    <!-- 관리자 버튼 (오른쪽 하단) -->
+    <button class="admin-btn" onclick="openAdminLogin()">
+        <iconify-icon icon="solar:shield-linear" width="20" height="20"></iconify-icon>
+    </button>
 
+    <!-- 관리자 로그인 모달 -->
+    <div id="adminLoginModal" class="modal-overlay">
+        <div class="bg-white w-96 p-8 shadow-xl">
+            <h3 class="text-2xl font-serif text-stone-800 mb-6">관리자 로그인</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-stone-600 mb-1">아이디</label>
+                    <input type="text" id="adminId" class="w-full border border-stone-200 px-4 py-2 text-sm focus:outline-none focus:border-amber-700" placeholder="one">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-stone-600 mb-1">비밀번호</label>
+                    <input type="password" id="adminPw" class="w-full border border-stone-200 px-4 py-2 text-sm focus:outline-none focus:border-amber-700" placeholder="••••••••">
+                </div>
+                <button onclick="adminLogin()" class="w-full bg-stone-800 text-white py-3 text-sm font-medium hover:bg-stone-900 transition-colors mt-4">로그인</button>
+                <button onclick="closeAdminLogin()" class="w-full text-stone-400 text-sm hover:text-stone-600 transition-colors mt-2">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 관리자 대시보드 모달 -->
+    <div id="adminDashboardModal" class="modal-overlay">
+        <div class="bg-white w-full max-w-5xl h-[80vh] p-8 shadow-xl overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-serif text-stone-800">지원자 관리</h3>
+                <div class="flex gap-3">
+                    <button onclick="exportToExcel()" class="bg-green-700 text-white px-4 py-2 text-sm font-medium hover:bg-green-800 transition-colors flex items-center gap-2">
+                        <iconify-icon icon="solar:document-linear" width="16"></iconify-icon>
+                        엑셀 다운로드
+                    </button>
+                    <button onclick="closeAdminDashboard()" class="text-stone-400 hover:text-stone-600">
+                        <iconify-icon icon="solar:close-circle-linear" width="24"></iconify-icon>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 지원자 테이블 -->
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>번호</th>
+                        <th>성명</th>
+                        <th>연락처</th>
+                        <th>이메일</th>
+                        <th>지원 동기</th>
+                        <th>제출일시</th>
+                    </tr>
+                </thead>
+                <tbody id="applicantTableBody">
+                    <!-- JavaScript로 데이터가 채워짐 -->
+                </tbody>
+            </table>
+            
+            <div class="mt-6 text-sm text-stone-400">
+                총 <span id="applicantCount">0</span>명의 지원자가 있습니다.
+            </div>
+        </div>
+    </div>
+
+    <main class="flex-grow pt-20 md:pt-24">
         <!-- Hero Section - 한국적 미학과 AI의 융합 -->
         <section class="max-w-7xl mx-auto px-6 mb-20 md:mb-28 mt-8 md:mt-12">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-end">
@@ -447,28 +571,28 @@
                 <h2 class="text-3xl md:text-4xl text-stone-900 font-medium mb-3 font-serif text-center">지원하기</h2>
                 <p class="text-center text-stone-500 font-light mb-12 keep-all">연세대학교 미래교육원 AI K-Culture 에듀테크 전문가 과정</p>
 
-                <form class="space-y-6">
+                <form id="applicationForm" class="space-y-6" onsubmit="saveApplication(event)">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-xs font-medium uppercase tracking-wider text-stone-600 mb-2">성명</label>
-                            <input type="text" class="w-full bg-white border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:border-amber-700 transition" placeholder="이름">
+                            <input type="text" id="appName" class="w-full bg-white border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:border-amber-700 transition" placeholder="이름" required>
                         </div>
                         <div>
                             <label class="block text-xs font-medium uppercase tracking-wider text-stone-600 mb-2">연락처</label>
-                            <input type="tel" class="w-full bg-white border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:border-amber-700 transition" placeholder="휴대폰 번호">
+                            <input type="tel" id="appPhone" class="w-full bg-white border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:border-amber-700 transition" placeholder="휴대폰 번호" required>
                         </div>
                     </div>
                     <div>
                         <label class="block text-xs font-medium uppercase tracking-wider text-stone-600 mb-2">이메일</label>
-                        <input type="email" class="w-full bg-white border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:border-amber-700 transition" placeholder="이메일 주소">
+                        <input type="email" id="appEmail" class="w-full bg-white border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:border-amber-700 transition" placeholder="이메일 주소" required>
                     </div>
                     <div>
                         <label class="block text-xs font-medium uppercase tracking-wider text-stone-600 mb-2">지원 동기</label>
-                        <textarea rows="5" class="w-full bg-white border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:border-amber-700 transition" placeholder="과정에 지원하는 동기와 기대하는 바를 작성해주세요."></textarea>
+                        <textarea id="appMotivation" rows="5" class="w-full bg-white border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:border-amber-700 transition" placeholder="과정에 지원하는 동기와 기대하는 바를 작성해주세요." required></textarea>
                     </div>
                     <div>
                         <label class="flex items-center gap-3 text-sm text-stone-600">
-                            <input type="checkbox" class="border-stone-300 text-amber-700 focus:ring-amber-700">
+                            <input type="checkbox" id="agreeTerms" class="border-stone-300 text-amber-700 focus:ring-amber-700" required>
                             <span>개인정보 수집·이용에 동의합니다 <span class="text-stone-400">(필수)</span></span>
                         </label>
                     </div>
@@ -501,23 +625,150 @@
     </footer>
 
     <script>
-        // Week Group Navigation
+        // ===== 지원자 데이터 관리 =====
+        let applicants = JSON.parse(localStorage.getItem('applicants')) || [];
+
+        // 지원서 저장
+        function saveApplication(event) {
+            event.preventDefault();
+            
+            const name = document.getElementById('appName').value;
+            const phone = document.getElementById('appPhone').value;
+            const email = document.getElementById('appEmail').value;
+            const motivation = document.getElementById('appMotivation').value;
+            
+            if (!name || !phone || !email || !motivation) {
+                alert('모든 항목을 입력해주세요.');
+                return;
+            }
+            
+            if (!document.getElementById('agreeTerms').checked) {
+                alert('개인정보 수집·이용에 동의해주세요.');
+                return;
+            }
+            
+            const newApplicant = {
+                id: Date.now(),
+                name: name,
+                phone: phone,
+                email: email,
+                motivation: motivation,
+                submittedAt: new Date().toLocaleString('ko-KR')
+            };
+            
+            applicants.push(newApplicant);
+            localStorage.setItem('applicants', JSON.stringify(applicants));
+            
+            alert('지원이 완료되었습니다. 감사합니다.');
+            document.getElementById('applicationForm').reset();
+        }
+
+        // ===== 관리자 기능 =====
+        function openAdminLogin() {
+            document.getElementById('adminLoginModal').classList.add('active');
+        }
+
+        function closeAdminLogin() {
+            document.getElementById('adminLoginModal').classList.remove('active');
+            document.getElementById('adminId').value = '';
+            document.getElementById('adminPw').value = '';
+        }
+
+        function adminLogin() {
+            const id = document.getElementById('adminId').value;
+            const pw = document.getElementById('adminPw').value;
+            
+            if (id === 'one' && pw === 'pass1234') {
+                closeAdminLogin();
+                loadApplicantData();
+                document.getElementById('adminDashboardModal').classList.add('active');
+            } else {
+                alert('아이디 또는 비밀번호가 올바르지 않습니다.');
+            }
+        }
+
+        function closeAdminDashboard() {
+            document.getElementById('adminDashboardModal').classList.remove('active');
+        }
+
+        // 지원자 데이터 로드
+        function loadApplicantData() {
+            const tbody = document.getElementById('applicantTableBody');
+            const countSpan = document.getElementById('applicantCount');
+            
+            applicants = JSON.parse(localStorage.getItem('applicants')) || [];
+            
+            if (applicants.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-stone-400">지원자가 없습니다.</td></tr>';
+                countSpan.textContent = '0';
+                return;
+            }
+            
+            let html = '';
+            applicants.sort((a, b) => b.id - a.id); // 최신순 정렬
+            
+            applicants.forEach((app, index) => {
+                html += `
+                    <tr>
+                        <td>${applicants.length - index}</td>
+                        <td>${app.name}</td>
+                        <td>${app.phone}</td>
+                        <td>${app.email}</td>
+                        <td>${app.motivation.substring(0, 30)}${app.motivation.length > 30 ? '...' : ''}</td>
+                        <td>${app.submittedAt}</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+            countSpan.textContent = applicants.length;
+        }
+
+        // 엑셀 다운로드
+        function exportToExcel() {
+            if (applicants.length === 0) {
+                alert('다운로드할 데이터가 없습니다.');
+                return;
+            }
+            
+            // 엑셀 데이터 준비
+            const excelData = applicants.map((app, index) => ({
+                '번호': applicants.length - index,
+                '성명': app.name,
+                '연락처': app.phone,
+                '이메일': app.email,
+                '지원동기': app.motivation,
+                '제출일시': app.submittedAt
+            }));
+            
+            // 워크시트 생성
+            const ws = XLSX.utils.json_to_sheet(excelData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '지원자목록');
+            
+            // 파일 다운로드
+            const fileName = `지원자목록_${new Date().toISOString().slice(0,10)}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        }
+
+        // ===== 커리큘럼 탭 =====
         function showWeekGroup(groupId) {
             document.querySelectorAll('.week-group').forEach(group => {
                 group.classList.add('hidden');
             });
             document.getElementById(groupId).classList.remove('hidden');
 
-            // Update active button style
             document.querySelectorAll('.weeks-nav-btn').forEach(btn => {
                 btn.classList.remove('bg-amber-700', 'text-white', 'border-amber-700');
                 btn.classList.add('bg-white', 'text-stone-700', 'border-stone-200');
             });
-            event.target.classList.remove('bg-white', 'text-stone-700', 'border-stone-200');
-            event.target.classList.add('bg-amber-700', 'text-white', 'border-amber-700');
+            
+            const activeBtn = event.target;
+            activeBtn.classList.remove('bg-white', 'text-stone-700', 'border-stone-200');
+            activeBtn.classList.add('bg-amber-700', 'text-white', 'border-amber-700');
         }
 
-        // Smooth scroll
+        // 스무스 스크롤
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -531,9 +782,23 @@
             });
         });
 
-        // Show first group by default
-        document.querySelector('.weeks-nav-btn').classList.remove('bg-white', 'text-stone-700', 'border-stone-200');
-        document.querySelector('.weeks-nav-btn').classList.add('bg-amber-700', 'text-white', 'border-amber-700');
+        // 초기화: 첫 번째 탭 활성화
+        window.addEventListener('load', function() {
+            const firstBtn = document.querySelector('.weeks-nav-btn');
+            if (firstBtn) {
+                firstBtn.classList.remove('bg-white', 'text-stone-700', 'border-stone-200');
+                firstBtn.classList.add('bg-amber-700', 'text-white', 'border-amber-700');
+            }
+            
+            // 모달 외부 클릭시 닫기
+            document.querySelectorAll('.modal-overlay').forEach(modal => {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        this.classList.remove('active');
+                    }
+                });
+            });
+        });
     </script>
 </body>
 </html>
